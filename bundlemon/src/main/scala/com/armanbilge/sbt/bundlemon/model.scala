@@ -17,6 +17,8 @@
 package com.armanbilge.sbt.bundlemon
 
 import io.circe.Codec
+import io.circe.Encoder
+import io.circe.Decoder
 
 final case class FileDetails(
     friendlyName: String,
@@ -61,7 +63,7 @@ final case class CommitRecordPayload(
 )
 
 object CommitRecordPayload {
-  implicit val codec: Codec[CommitRecordPayload] = Codec.forProduct7(
+  implicit val encoder: Encoder[CommitRecordPayload] = Encoder.forProduct7(
     "subProject",
     "files",
     "groups",
@@ -69,7 +71,7 @@ object CommitRecordPayload {
     "commitSha",
     "baseBranch",
     "prNumber"
-  )(CommitRecordPayload.apply)(cr =>
+  )(cr =>
     (
       cr.subProject,
       cr.files,
@@ -90,3 +92,55 @@ object CreateCommitRecordResponse {
       _.linkToReport
     )
 }
+
+final case class GithubOutputPayload(
+    git: GithubCommitInfo,
+    output: GithubOutputOptions
+)
+
+object GithubOutputPayload {
+  implicit val encoder: Encoder[GithubOutputPayload] =
+    Encoder.forProduct2("git", "output")(gop => (gop.git, gop.output))
+}
+
+final case class GithubCommitInfo(
+    owner: String,
+    repo: String,
+    commitSha: String,
+    prNumber: Option[String]
+)
+
+object GithubCommitInfo {
+  implicit val codec: Codec[GithubCommitInfo] =
+    Codec.forProduct4("owner", "repo", "commitSha", "prNumber")(GithubCommitInfo.apply)(gci =>
+      (gci.owner, gci.repo, gci.commitSha, gci.prNumber)
+    )
+}
+
+final case class GithubOutputResponse()
+
+object GithubOutputResponse {
+  implicit val decoder: Decoder[GithubOutputResponse] =
+    Decoder.decodeUnit.map(_ => GithubOutputResponse())
+}
+
+final case class GithubOutputOptions(
+    checkRun: Boolean,
+    commitStatus: Boolean,
+    prComment: Boolean
+)
+
+object GithubOutputOptions {
+  implicit def encoder: Encoder[GithubOutputOptions] =
+    Encoder.forProduct3("checkRun", "commitStatus", "prComment")(goo =>
+      (goo.checkRun, goo.commitStatus, goo.prComment)
+    )
+}
+
+final case class Report(
+    metadata: ReportMetadata
+)
+
+final case class ReportMetadata(
+    linkToReport: Option[String]
+)

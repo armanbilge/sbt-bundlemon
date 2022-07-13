@@ -17,6 +17,8 @@
 package com.armanbilge.sbt.bundlemon
 
 import cats.effect.Concurrent
+import cats.effect.Sync
+import cats.syntax.all._
 import org.http4s.Headers
 import org.http4s.Method
 import org.http4s.Request
@@ -28,16 +30,11 @@ trait BundlemonClient[F[_]] {
 
   def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse]
 
+  def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse]
+
 }
 
 object BundlemonClient {
-
-  sealed abstract class Auth
-  final case class GithubActionsAuth(
-      owner: String,
-      repo: String,
-      runId: String
-  ) extends Auth
 
   def apply[F[_]: Concurrent](
       client: Client[F],
@@ -55,10 +52,47 @@ object BundlemonClient {
         )
     }
 
-    val uri = endpoint / "v1" / "projects" / projectId / "commit-records"
-    val request = Request[F](Method.POST, uri, headers = clientHeaders ++ authHeaders)
+    val baseUri = endpoint / "v1"
+    val headers = clientHeaders ++ authHeaders
 
-    payload => client.expect[CreateCommitRecordResponse](request.withEntity(payload))
+    val createCommitRecordRequest = {
+      val uri = baseUri / "projects" / projectId / "commit-records"
+      Request[F](Method.POST, uri, headers = headers)
+    }
+
+    val createGithubOutputRequest = {
+      val uri = baseUri / "projects" / projectId / "outputs" / "github"
+      Request[F](Method.POST, uri, headers = headers)
+    }
+
+    new BundlemonClient[F] {
+
+      def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse] =
+        client.expect(createCommitRecordRequest.withEntity(payload))
+
+      def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse] =
+        client.expect[GithubOutputResponse](createGithubOutputRequest.withEntity(payload))
+
+    }
+  }
+
+  sealed abstract class Auth
+
+  final case class GithubActionsAuth(
+      owner: String,
+      repo: String,
+      runId: String
+  ) extends Auth
+
+  object GithubActionsAuth {
+    def fromEnv[F[_]](implicit F: Sync[F]): F[Option[GithubActionsAuth]] = F.delay {
+      (
+        Option(System.getenv("GITHUB_REPOSITORY")).map(_.split('/')),
+        Option(System.getenv("GITHUB_RUN_ID"))
+      ).tupled.collect {
+        case (Array(owner, repo), runId) => GithubActionsAuth(owner, repo, runId)
+      }
+    }
   }
 
   private val clientHeaders =
