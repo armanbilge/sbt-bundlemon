@@ -100,11 +100,8 @@ object BundleMonPlugin extends AutoPlugin {
       val commitSha =
         jawn
           .decodePath[GithubEvent](Paths.get(System.getenv("GITHUB_EVENT_PATH")))
-          .toTry
-          .get
-          .pullRequest
-          .head
-          .sha
+          .toOption
+          .fold(System.getenv("GITHUB_SHA"))(_.pullRequest.head.sha)
 
       val gitDetails = GitDetails("github", owner, repo)
 
