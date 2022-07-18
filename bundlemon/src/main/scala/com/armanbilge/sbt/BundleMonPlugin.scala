@@ -44,6 +44,7 @@ object BundleMonPlugin extends AutoPlugin {
 
   override lazy val buildSettings: Seq[Setting[_]] = Seq(
     bundleMonMaxSize := Map.empty,
+    bundleMonMaxPercentIncrease := Map.empty,
     bundleMonCheckRun := false,
     bundleMonCommitStatus := true,
     bundleMonPrComment := true
