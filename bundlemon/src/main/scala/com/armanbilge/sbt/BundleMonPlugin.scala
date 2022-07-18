@@ -96,6 +96,8 @@ object BundleMonPlugin extends AutoPlugin {
       val prNumber = if (isPr) Some(ref(2)) else None
       val commitSha = System.getenv("GITHUB_SHA")
 
+      val gitDetails = GitDetails("github", owner, repo)
+
       val commitRecordPayload = CommitRecordPayload(
         subProject,
         fileDetails,
@@ -128,13 +130,14 @@ object BundleMonPlugin extends AutoPlugin {
             val client = BundleMonClient(
               ember,
               uri"https://api.bundlemon.dev",
-              System.getenv("BUNDLEMON_PROJECT_ID"),
               auth.get
             )
 
-            client.createCommitRecord(commitRecordPayload).flatMap { response =>
-              client.createGithubOutput(response.record.id, outputPayload)
-            }
+            for {
+              project <- client.getOrCreateProjectId(gitDetails)
+              commitRecord <- client.createCommitRecord(project.id, commitRecordPayload)
+              _ <- client.createGithubOutput(project.id, commitRecord.record.id, outputPayload)
+            } yield ()
           }
         }
         .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)

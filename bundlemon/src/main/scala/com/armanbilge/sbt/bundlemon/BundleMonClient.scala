@@ -28,9 +28,15 @@ import org.http4s.client.Client
 
 trait BundleMonClient[F[_]] {
 
-  def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse]
+  def getOrCreateProjectId(payload: GitDetails): F[Project]
+
+  def createCommitRecord(
+      projectId: String,
+      payload: CommitRecordPayload
+  ): F[CreateCommitRecordResponse]
 
   def createGithubOutput(
+      projectId: String,
       commitRecordId: String,
       payload: GithubOutputPayload
   ): F[GithubOutputResponse]
@@ -42,7 +48,6 @@ object BundleMonClient {
   def apply[F[_]: Concurrent](
       client: Client[F],
       endpoint: Uri,
-      projectId: String,
       auth: Auth
   ): BundleMonClient[F] = {
     val authHeaders = auth match {
@@ -58,29 +63,32 @@ object BundleMonClient {
     val baseUri = endpoint / "v1"
     val headers = clientHeaders ++ authHeaders
 
-    val createCommitRecordRequest = {
-      val uri = baseUri / "projects" / projectId / "commit-records"
-      Request[F](Method.POST, uri, headers = headers)
-    }
-
-    def createGithubOutputRequest(commitRecordId: String) = {
-      val uri =
-        baseUri / "projects" / projectId / "commit-records" / commitRecordId / "outputs" / "github"
-      Request[F](Method.POST, uri, headers = headers)
-    }
-
     new BundleMonClient[F] {
 
-      def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse] =
-        client.expect(createCommitRecordRequest.withEntity(payload))
+      def getOrCreateProjectId(payload: GitDetails): F[Project] = {
+        val uri = baseUri / "projects" / "id"
+        client.expect(Request[F](Method.POST, uri, headers = headers).withEntity(payload))
+      }
+
+      def createCommitRecord(
+          projectId: String,
+          payload: CommitRecordPayload
+      ): F[CreateCommitRecordResponse] = {
+        val uri = baseUri / "projects" / projectId / "commit-records"
+        client.expect(Request[F](Method.POST, uri, headers = headers).withEntity(payload))
+      }
 
       def createGithubOutput(
+          projectId: String,
           commitRecordId: String,
           payload: GithubOutputPayload
-      ): F[GithubOutputResponse] =
+      ): F[GithubOutputResponse] = {
+        val uri =
+          baseUri / "projects" / projectId / "commit-records" / commitRecordId / "outputs" / "github"
         client.expect[GithubOutputResponse](
-          createGithubOutputRequest(commitRecordId).withEntity(payload)
+          Request[F](Method.POST, uri, headers = headers).withEntity(payload)
         )
+      }
 
     }
   }

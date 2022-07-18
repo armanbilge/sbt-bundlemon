@@ -20,6 +20,19 @@ import io.circe.Codec
 import io.circe.Encoder
 import io.circe.Decoder
 
+final case class GitDetails(provider: String, owner: String, repo: String)
+
+object GitDetails {
+  implicit def encoder: Encoder[GitDetails] =
+    Encoder.forProduct3("provider", "owner", "repo")(gd => (gd.provider, gd.owner, gd.repo))
+}
+
+final case class Project(id: String)
+
+object Project {
+  implicit def decoder: Decoder[Project] = Decoder.forProduct1("id")(Project.apply)
+}
+
 final case class FileDetails(
     friendlyName: String,
     pattern: String,
