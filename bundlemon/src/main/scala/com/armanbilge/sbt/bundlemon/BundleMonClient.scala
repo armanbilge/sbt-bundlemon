@@ -19,14 +19,15 @@ package com.armanbilge.sbt.bundlemon
 import cats.effect.Concurrent
 import cats.effect.Sync
 import cats.syntax.all._
+import io.circe.Encoder
 import io.circe.Json
+import org.http4s.EntityEncoder
 import org.http4s.Headers
 import org.http4s.Method
 import org.http4s.Query
 import org.http4s.Request
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityDecoder
-import org.http4s.circe.CirceEntityEncoder
 import org.http4s.circe.CirceInstances
 import org.http4s.client.Client
 
@@ -63,9 +64,12 @@ object BundleMonClient {
 
     val baseUri = (endpoint / "v1").copy(query = authQuery)
 
-    new BundleMonClient[F] with CirceInstances with CirceEntityDecoder with CirceEntityEncoder {
+    new BundleMonClient[F] with CirceInstances with CirceEntityDecoder {
 
       override protected val defaultPrinter = super.defaultPrinter.copy(dropNullValues = true)
+
+      implicit def circeEntityEncoder[A: Encoder]: EntityEncoder[F, A] =
+        jsonEncoderOf[F, A]
 
       def getOrCreateProjectId(payload: GitDetails): F[Project] = {
         val uri = baseUri / "projects" / "id"
