@@ -29,6 +29,7 @@ import java.nio.file.Paths
 
 import Keys._
 import ScalaJSPlugin.autoImport._
+import org.http4s.client.Client
 
 object BundleMonPlugin extends AutoPlugin {
 
@@ -130,11 +131,29 @@ object BundleMonPlugin extends AutoPlugin {
 
       val log = streams.value.log
 
+      def middleware(client: Client[cats.effect.IO]) =
+        if (System.getProperty("plugin.version") != null) {
+          // scripted tests
+
+          val f = RequestLogger[cats.effect.IO](
+            true,
+            true,
+            logAction = Some(s => cats.effect.IO(log.info(s)))
+          )(_)
+
+          val g = ResponseLogger[cats.effect.IO](
+            true,
+            true,
+            logAction = Some(s => cats.effect.IO(log.info(s)))
+          )(_)
+
+          f(g(client))
+        } else client
+
       EmberClientBuilder
         .default[cats.effect.IO]
         .build
-        .map(RequestLogger(true, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
-        .map(ResponseLogger(true, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
+        .map(middleware)
         .use { ember =>
           BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
             val client = BundleMonClient(
