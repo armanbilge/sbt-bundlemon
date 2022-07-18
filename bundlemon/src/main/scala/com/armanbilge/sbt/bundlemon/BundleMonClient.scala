@@ -30,7 +30,10 @@ trait BundleMonClient[F[_]] {
 
   def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse]
 
-  def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse]
+  def createGithubOutput(
+      commitRecordId: String,
+      payload: GithubOutputPayload
+  ): F[GithubOutputResponse]
 
 }
 
@@ -60,8 +63,9 @@ object BundleMonClient {
       Request[F](Method.POST, uri, headers = headers)
     }
 
-    val createGithubOutputRequest = {
-      val uri = baseUri / "projects" / projectId / "outputs" / "github"
+    def createGithubOutputRequest(commitRecordId: String) = {
+      val uri =
+        baseUri / "outputs" / "github" +? ("projectId" -> projectId) +? ("commitRecordId" -> commitRecordId)
       Request[F](Method.POST, uri, headers = headers)
     }
 
@@ -70,8 +74,13 @@ object BundleMonClient {
       def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse] =
         client.expect(createCommitRecordRequest.withEntity(payload))
 
-      def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse] =
-        client.expect[GithubOutputResponse](createGithubOutputRequest.withEntity(payload))
+      def createGithubOutput(
+          commitRecordId: String,
+          payload: GithubOutputPayload
+      ): F[GithubOutputResponse] =
+        client.expect[GithubOutputResponse](
+          createGithubOutputRequest(commitRecordId).withEntity(payload)
+        )
 
     }
   }

@@ -84,13 +84,20 @@ object CommitRecordPayload {
   )
 }
 
-final case class CreateCommitRecordResponse(linkToReport: String)
+final case class CreateCommitRecordResponse(record: CommitRecord)
 
 object CreateCommitRecordResponse {
   implicit val codec: Codec[CreateCommitRecordResponse] =
-    Codec.forProduct1("linkToReport")(CreateCommitRecordResponse.apply)(
-      _.linkToReport
+    Codec.forProduct1("record")(CreateCommitRecordResponse.apply)(
+      _.record
     )
+}
+
+final case class CommitRecord(id: String)
+
+object CommitRecord {
+  implicit val codec: Codec[CommitRecord] =
+    Codec.forProduct1("id")(CommitRecord.apply)(_.id)
 }
 
 final case class GithubOutputPayload(
@@ -137,11 +144,3 @@ object GithubOutputOptions {
       (goo.checkRun, goo.commitStatus, goo.prComment)
     )
 }
-
-final case class Report(
-    metadata: ReportMetadata
-)
-
-final case class ReportMetadata(
-    linkToReport: Option[String]
-)

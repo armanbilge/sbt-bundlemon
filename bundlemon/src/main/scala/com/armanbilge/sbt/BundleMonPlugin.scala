@@ -132,8 +132,9 @@ object BundleMonPlugin extends AutoPlugin {
               auth.get
             )
 
-            client.createCommitRecord(commitRecordPayload) *>
-              client.createGithubOutput(outputPayload)
+            client.createCommitRecord(commitRecordPayload).flatMap { response =>
+              client.createGithubOutput(response.record.id, outputPayload)
+            }
           }
         }
         .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)
