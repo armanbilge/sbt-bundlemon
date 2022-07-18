@@ -19,6 +19,7 @@ package com.armanbilge.sbt.bundlemon
 import cats.effect.Concurrent
 import cats.effect.Sync
 import cats.syntax.all._
+import io.circe.Json
 import org.http4s.Headers
 import org.http4s.Method
 import org.http4s.Query
@@ -40,7 +41,7 @@ trait BundleMonClient[F[_]] {
       projectId: String,
       commitRecordId: String,
       payload: GithubOutputPayload
-  ): F[GithubOutputResponse]
+  ): F[Unit]
 
 }
 
@@ -82,12 +83,14 @@ object BundleMonClient {
           projectId: String,
           commitRecordId: String,
           payload: GithubOutputPayload
-      ): F[GithubOutputResponse] = {
+      ): F[Unit] = {
         val uri =
           baseUri / "projects" / projectId / "commit-records" / commitRecordId / "outputs" / "github"
-        client.expect[GithubOutputResponse](
-          Request[F](Method.POST, uri, headers = headers).withEntity(payload)
-        )
+        client
+          .expect[Json](
+            Request[F](Method.POST, uri, headers = headers).withEntity(payload)
+          )
+          .void
       }
 
     }

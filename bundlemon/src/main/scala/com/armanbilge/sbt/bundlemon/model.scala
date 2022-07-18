@@ -138,13 +138,6 @@ object GithubCommitInfo {
     )(gci => (gci.runId, gci.owner, gci.repo, gci.commitSha, gci.prNumber))
 }
 
-final case class GithubOutputResponse()
-
-object GithubOutputResponse {
-  implicit val decoder: Decoder[GithubOutputResponse] =
-    Decoder.decodeUnit.map(_ => GithubOutputResponse())
-}
-
 final case class GithubOutputOptions(
     checkRun: Boolean,
     commitStatus: Boolean,
