@@ -106,7 +106,8 @@ object BundleMonPlugin extends AutoPlugin {
         prNumber
       )
 
-      val commitInfo = GithubCommitInfo(owner, repo, commitSha, prNumber)
+      val commitInfo =
+        GithubCommitInfo(System.getenv("GITHUB_RUN_ID"), owner, repo, commitSha, prNumber)
       val outputOptions = GithubOutputOptions(
         bundleMonCheckRun.value,
         bundleMonCommitStatus.value,

@@ -104,6 +104,7 @@ object GithubOutputPayload {
 }
 
 final case class GithubCommitInfo(
+    runId: String,
     owner: String,
     repo: String,
     commitSha: String,
@@ -112,9 +113,9 @@ final case class GithubCommitInfo(
 
 object GithubCommitInfo {
   implicit val codec: Codec[GithubCommitInfo] =
-    Codec.forProduct4("owner", "repo", "commitSha", "prNumber")(GithubCommitInfo.apply)(gci =>
-      (gci.owner, gci.repo, gci.commitSha, gci.prNumber)
-    )
+    Codec.forProduct5("runId", "owner", "repo", "commitSha", "prNumber")(
+      GithubCommitInfo.apply
+    )(gci => (gci.runId, gci.owner, gci.repo, gci.commitSha, gci.prNumber))
 }
 
 final case class GithubOutputResponse()
