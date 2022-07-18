@@ -17,12 +17,15 @@
 package com.armanbilge.sbt
 
 import com.armanbilge.sbt.bundlemon._
+import io.circe.jawn
+import org.http4s.client.middleware.RequestLogger
+import org.http4s.client.middleware.ResponseLogger
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.syntax.all._
 import org.scalajs.sbtplugin.ScalaJSPlugin
-import org.http4s.client.middleware.RequestLogger
-import org.http4s.client.middleware.ResponseLogger
 import sbt._
+
+import java.nio.file.Paths
 
 import Keys._
 import ScalaJSPlugin.autoImport._
@@ -94,7 +97,14 @@ object BundleMonPlugin extends AutoPlugin {
       val ref = System.getenv("GITHUB_REF").split('/')
 
       val prNumber = if (isPr) Some(ref(2)) else None
-      val commitSha = System.getenv("GITHUB_SHA")
+      val commitSha =
+        jawn
+          .decodePath[GithubEvent](Paths.get(System.getenv("GITHUB_EVENT_PATH")))
+          .toTry
+          .get
+          .pullRequest
+          .head
+          .sha
 
       val gitDetails = GitDetails("github", owner, repo)
 
