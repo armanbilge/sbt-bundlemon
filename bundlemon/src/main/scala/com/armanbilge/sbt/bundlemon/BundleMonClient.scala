@@ -65,7 +65,7 @@ object BundleMonClient {
 
     def createGithubOutputRequest(commitRecordId: String) = {
       val uri =
-        baseUri / "outputs" / "github" +? ("projectId" -> projectId) +? ("commitRecordId" -> commitRecordId)
+        baseUri / "projects" / projectId / "commit-records" / commitRecordId / "outputs" / "github"
       Request[F](Method.POST, uri, headers = headers)
     }
 
