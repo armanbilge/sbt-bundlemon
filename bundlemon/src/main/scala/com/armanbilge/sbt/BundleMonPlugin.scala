@@ -86,29 +86,47 @@ object BundleMonPlugin extends AutoPlugin {
         scalaBinaryVersion.value
       ).fold(modName)(_.apply(modName))
 
+      val Array(owner, repo) = System.getenv("GITHUB_REPOSITORY").split('/')
+
       val isPr = System.getenv("GITHUB_EVENT_NAME") == "pull_request"
       val ref = System.getenv("GITHUB_REF").split('/')
-      val payload = CommitRecordPayload(
+
+      val prNumber = if (isPr) Some(ref(3)) else None
+      val commitSha = System.getenv("GITHUB_SHA")
+
+      val commitRecordPayload = CommitRecordPayload(
         subProject,
         fileDetails,
         Nil,
         if (isPr) System.getenv("GITHUB_HEAD_REF") else ref.drop(2).mkString("/"),
-        System.getenv("GITHUB_SHA"),
+        commitSha,
         Option(System.getenv("GITHUB_BASE_REF")),
-        if (isPr) Some(ref(3)) else None
+        prNumber
       )
+
+      val commitInfo = GithubCommitInfo(owner, repo, commitSha, prNumber)
+      val outputOptions = GithubOutputOptions(
+        bundleMonCheckRun.value,
+        bundleMonCommitStatus.value,
+        bundleMonPrComment.value
+      )
+
+      val outputPayload = GithubOutputPayload(commitInfo, outputOptions)
 
       EmberClientBuilder
         .default[cats.effect.IO]
         .build
         .use { ember =>
-          BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].map { auth =>
+          BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
             val client = BundleMonClient(
               ember,
               uri"https://api.bundlemon.dev",
               System.getenv("BUNDLEMON_PROJECT_ID"),
               auth.get
             )
+
+            client.createCommitRecord(commitRecordPayload) *>
+              client.createGithubOutput(outputPayload)
           }
         }
         .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)
