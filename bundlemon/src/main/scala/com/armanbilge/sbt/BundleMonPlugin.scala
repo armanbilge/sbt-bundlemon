@@ -72,7 +72,7 @@ object BundleMonPlugin extends AutoPlugin {
 
         FileDetails(
           file.getName,
-          "**/*.js",
+          "*.js",
           file.getName,
           size,
           "gzip",
