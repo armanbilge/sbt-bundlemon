@@ -28,6 +28,7 @@ lazy val bundlemon = project
     scriptedLaunchOpts := {
       scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     },
+    scriptedBufferLog := false,
     Test / test := {
       scripted.toTask("").value
     }
