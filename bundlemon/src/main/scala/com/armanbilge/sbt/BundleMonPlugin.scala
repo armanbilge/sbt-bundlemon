@@ -57,7 +57,6 @@ object BundleMonPlugin extends AutoPlugin {
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    Compile / scalaJSStage := FullOptStage,
     Compile / bundleMon := {
       val maxSize = bundleMonMaxSize.value
       val maxPercentIncrease = bundleMonMaxPercentIncrease.value
