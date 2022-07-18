@@ -21,6 +21,7 @@ import cats.effect.Sync
 import cats.syntax.all._
 import org.http4s.Headers
 import org.http4s.Method
+import org.http4s.Query
 import org.http4s.Request
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
@@ -50,18 +51,14 @@ object BundleMonClient {
       endpoint: Uri,
       auth: Auth
   ): BundleMonClient[F] = {
-    val authHeaders = auth match {
-      case GithubActionsAuth(owner, repo, runId) =>
-        Headers(
-          "BundleMon-Auth-Type" -> "GITHUB_ACTION",
-          "GitHub-Owner" -> owner,
-          "GitHub-Repo" -> repo,
-          "GitHub-Run-ID" -> runId
-        )
+
+    val headers = clientHeaders
+    val authQuery = auth match {
+      case GithubActionsAuth(_, _, runId) =>
+        Query("authType" -> "GITHUB_ACTIONS".some, "runId" -> runId.some)
     }
 
-    val baseUri = endpoint / "v1"
-    val headers = clientHeaders ++ authHeaders
+    val baseUri = (endpoint / "v1").copy(query = authQuery)
 
     new BundleMonClient[F] {
 
@@ -75,7 +72,10 @@ object BundleMonClient {
           payload: CommitRecordPayload
       ): F[CreateCommitRecordResponse] = {
         val uri = baseUri / "projects" / projectId / "commit-records"
-        client.expect(Request[F](Method.POST, uri, headers = headers).withEntity(payload))
+        client.expect(
+          Request[F](Method.POST, uri.copy(query = authQuery), headers = headers)
+            .withEntity(payload)
+        )
       }
 
       def createGithubOutput(
