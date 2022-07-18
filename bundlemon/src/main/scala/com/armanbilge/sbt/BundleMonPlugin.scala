@@ -111,7 +111,7 @@ object BundleMonPlugin extends AutoPlugin {
         Nil,
         if (isPr) System.getenv("GITHUB_HEAD_REF") else ref.drop(2).mkString("/"),
         commitSha,
-        Option(System.getenv("GITHUB_BASE_REF")),
+        Option(System.getenv("GITHUB_BASE_REF")).filter(_.nonEmpty),
         prNumber
       )
 
