@@ -10,6 +10,8 @@ ThisBuild / crossScalaVersions := Seq("2.12.16")
 
 val http4sVersion = "0.23.13"
 
+ThisBuild / githubWorkflowEnv += "BUNDLEMON_PROJECT_ID" -> "${{ secrets.BUNDLEMON_PROJECT_ID }}"
+
 lazy val root = tlCrossRootProject.aggregate(bundlemon)
 
 lazy val bundlemon = project
