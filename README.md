@@ -20,7 +20,7 @@ lazy val todoMvc = project.in(file("todo-mvc"))
   )
 ```
 
-4. Add the following step to step to your CI workflow:
+4. Add the following step to your CI workflow:
 ```yaml
 - name: Monitor bundle size
   run: sbt bundleMon
