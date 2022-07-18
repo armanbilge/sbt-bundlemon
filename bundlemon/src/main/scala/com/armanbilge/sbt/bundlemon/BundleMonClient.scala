@@ -26,7 +26,7 @@ import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.client.Client
 
-trait BundlemonClient[F[_]] {
+trait BundleMonClient[F[_]] {
 
   def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse]
 
@@ -34,14 +34,14 @@ trait BundlemonClient[F[_]] {
 
 }
 
-object BundlemonClient {
+object BundleMonClient {
 
   def apply[F[_]: Concurrent](
       client: Client[F],
       endpoint: Uri,
       projectId: String,
       auth: Auth
-  ): BundlemonClient[F] = {
+  ): BundleMonClient[F] = {
     val authHeaders = auth match {
       case GithubActionsAuth(owner, repo, runId) =>
         Headers(
@@ -65,7 +65,7 @@ object BundlemonClient {
       Request[F](Method.POST, uri, headers = headers)
     }
 
-    new BundlemonClient[F] {
+    new BundleMonClient[F] {
 
       def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse] =
         client.expect(createCommitRecordRequest.withEntity(payload))
