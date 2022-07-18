@@ -6,7 +6,7 @@ ThisBuild / developers += tlGitHubDev("armanbilge", "Arman Bilge")
 ThisBuild / startYear := Some(2022)
 ThisBuild / tlSonatypeUseLegacyHost := false
 
-ThisBuild / crossScalaVersions := Seq("2.12.16")
+ThisBuild / crossScalaVersions := Seq("2.13.8")
 
 val http4sVersion = "0.23.13"
 
