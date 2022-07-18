@@ -123,8 +123,8 @@ object BundleMonPlugin extends AutoPlugin {
       EmberClientBuilder
         .default[cats.effect.IO]
         .build
-        .map(RequestLogger(false, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
-        .map(ResponseLogger(false, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
+        .map(RequestLogger(true, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
+        .map(ResponseLogger(true, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
         .use { ember =>
           BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
             val client = BundleMonClient(
