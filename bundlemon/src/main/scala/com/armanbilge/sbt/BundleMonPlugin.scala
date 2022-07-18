@@ -98,7 +98,7 @@ object BundleMonPlugin extends AutoPlugin {
       val isPr = System.getenv("GITHUB_EVENT_NAME") == "pull_request"
       val ref = System.getenv("GITHUB_REF").split('/')
 
-      val prNumber = if (isPr) Some(ref(3)) else None
+      val prNumber = if (isPr) Some(ref(2)) else None
       val commitSha = System.getenv("GITHUB_SHA")
 
       val commitRecordPayload = CommitRecordPayload(
