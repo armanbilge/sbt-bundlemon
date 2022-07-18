@@ -30,6 +30,7 @@ import java.nio.file.Paths
 import Keys._
 import ScalaJSPlugin.autoImport._
 import org.http4s.client.Client
+import java.util.concurrent.atomic.AtomicLong
 
 object BundleMonPlugin extends AutoPlugin {
 
@@ -68,9 +69,9 @@ object BundleMonPlugin extends AutoPlugin {
 
       val fileDetails = files.map { file =>
         val size = io.Using.fileInputStream(file) { in =>
-          var size = 0L
-          IO.gzip(in, _ => size += 1)
-          size
+          val sum = new AtomicLong
+          IO.gzip(in, _ => sum.incrementAndGet())
+          sum.get()
         }
 
         FileDetails(
