@@ -1,0 +1,2 @@
+enablePlugins(BundleMonPlugin)
+scalaJSUseMainModuleInitializer := true

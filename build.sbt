@@ -22,6 +22,12 @@ lazy val bundlemon = project
     ),
     addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.10.1"),
     buildInfoPackage := "com.armanbilge.sbt.bundlemon",
-    buildInfoOptions += BuildInfoOption.PackagePrivate
+    buildInfoOptions += BuildInfoOption.PackagePrivate,
+    scriptedLaunchOpts := {
+      scriptedLaunchOpts.value ++ Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
+    },
+    Test / test := {
+      scripted.toTask("").value
+    }
   )
   .enablePlugins(SbtPlugin, BuildInfoPlugin)
