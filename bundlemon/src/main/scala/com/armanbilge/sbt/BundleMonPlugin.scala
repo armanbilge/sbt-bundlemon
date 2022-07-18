@@ -20,6 +20,8 @@ import com.armanbilge.sbt.bundlemon._
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.syntax.all._
 import org.scalajs.sbtplugin.ScalaJSPlugin
+import org.http4s.client.middleware.RequestLogger
+import org.http4s.client.middleware.ResponseLogger
 import sbt._
 
 import Keys._
@@ -113,9 +115,13 @@ object BundleMonPlugin extends AutoPlugin {
 
       val outputPayload = GithubOutputPayload(commitInfo, outputOptions)
 
+      val log = streams.value.log
+
       EmberClientBuilder
         .default[cats.effect.IO]
         .build
+        .map(RequestLogger(false, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
+        .map(ResponseLogger(false, true, logAction = Some(s => cats.effect.IO(log.info(s)))))
         .use { ember =>
           BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
             val client = BundleMonClient(
