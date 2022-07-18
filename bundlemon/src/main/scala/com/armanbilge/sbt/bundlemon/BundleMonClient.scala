@@ -25,7 +25,9 @@ import org.http4s.Method
 import org.http4s.Query
 import org.http4s.Request
 import org.http4s.Uri
-import org.http4s.circe.CirceEntityCodec._
+import org.http4s.circe.CirceEntityDecoder
+import org.http4s.circe.CirceEntityEncoder
+import org.http4s.circe.CirceInstances
 import org.http4s.client.Client
 
 trait BundleMonClient[F[_]] {
@@ -61,7 +63,9 @@ object BundleMonClient {
 
     val baseUri = (endpoint / "v1").copy(query = authQuery)
 
-    new BundleMonClient[F] {
+    new BundleMonClient[F] with CirceInstances with CirceEntityDecoder with CirceEntityEncoder {
+
+      override protected val defaultPrinter = super.defaultPrinter.copy(dropNullValues = true)
 
       def getOrCreateProjectId(payload: GitDetails): F[Project] = {
         val uri = baseUri / "projects" / "id"
@@ -89,7 +93,7 @@ object BundleMonClient {
         client
           .expect[Json](
             Request[F](Method.POST, uri, headers = headers).withEntity(payload)
-          )
+          )(jsonDecoder)
           .void
       }
 
