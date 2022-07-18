@@ -58,12 +58,7 @@ object BundleMonPlugin extends AutoPlugin {
       val maxSize = bundleMonMaxSize.value
       val maxPercentIncrease = bundleMonMaxPercentIncrease.value
 
-      val outputDir =
-        (Compile / fullLinkJS / scalaJSLinkerOutputDirectory)
-          .value
-          .relativeTo(baseDirectory.value)
-          .get
-
+      val outputDir = (Compile / fullLinkJS / scalaJSLinkerOutputDirectory).value
       val files = (Compile / fullLinkJS).value.data.publicModules.map { module =>
         outputDir / module.jsFileName
       }
@@ -78,7 +73,7 @@ object BundleMonPlugin extends AutoPlugin {
         FileDetails(
           file.getName,
           "**/*.js",
-          file.getPath,
+          file.getName,
           size,
           "gzip",
           maxSize.get(file.getName),
