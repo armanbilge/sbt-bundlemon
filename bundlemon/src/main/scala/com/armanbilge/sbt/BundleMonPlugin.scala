@@ -17,13 +17,19 @@
 package com.armanbilge.sbt
 
 import com.armanbilge.sbt.bundlemon._
+import io.circe.jawn
+import org.http4s.client.middleware.RequestLogger
+import org.http4s.client.middleware.ResponseLogger
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.syntax.all._
 import org.scalajs.sbtplugin.ScalaJSPlugin
 import sbt._
 
+import java.nio.file.Paths
+
 import Keys._
 import ScalaJSPlugin.autoImport._
+import org.http4s.client.Client
 
 object BundleMonPlugin extends AutoPlugin {
 
@@ -44,13 +50,13 @@ object BundleMonPlugin extends AutoPlugin {
 
   override lazy val buildSettings: Seq[Setting[_]] = Seq(
     bundleMonMaxSize := Map.empty,
+    bundleMonMaxPercentIncrease := Map.empty,
     bundleMonCheckRun := false,
     bundleMonCommitStatus := true,
     bundleMonPrComment := true
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    Compile / scalaJSStage := FullOptStage,
     Compile / bundleMon := {
       val maxSize = bundleMonMaxSize.value
       val maxPercentIncrease = bundleMonMaxPercentIncrease.value
@@ -69,8 +75,8 @@ object BundleMonPlugin extends AutoPlugin {
 
         FileDetails(
           file.getName,
-          "**/*.js",
-          file.getPath,
+          "*.js",
+          file.getName,
           size,
           "gzip",
           maxSize.get(file.getName),
@@ -85,29 +91,81 @@ object BundleMonPlugin extends AutoPlugin {
         scalaBinaryVersion.value
       ).fold(modName)(_.apply(modName))
 
+      val Array(owner, repo) = System.getenv("GITHUB_REPOSITORY").split('/')
+
       val isPr = System.getenv("GITHUB_EVENT_NAME") == "pull_request"
       val ref = System.getenv("GITHUB_REF").split('/')
-      val payload = CommitRecordPayload(
+
+      val prNumber = if (isPr) Some(ref(2)) else None
+      val commitSha =
+        jawn
+          .decodePath[GithubEvent](Paths.get(System.getenv("GITHUB_EVENT_PATH")))
+          .toTry
+          .get
+          .pullRequest
+          .head
+          .sha
+
+      val gitDetails = GitDetails("github", owner, repo)
+
+      val commitRecordPayload = CommitRecordPayload(
         subProject,
         fileDetails,
         Nil,
         if (isPr) System.getenv("GITHUB_HEAD_REF") else ref.drop(2).mkString("/"),
-        System.getenv("GITHUB_SHA"),
+        commitSha,
         Option(System.getenv("GITHUB_BASE_REF")),
-        if (isPr) Some(ref(3)) else None
+        prNumber
       )
+
+      val commitInfo =
+        GithubCommitInfo(System.getenv("GITHUB_RUN_ID"), owner, repo, commitSha, prNumber)
+      val outputOptions = GithubOutputOptions(
+        bundleMonCheckRun.value,
+        bundleMonCommitStatus.value,
+        bundleMonPrComment.value
+      )
+
+      val outputPayload = GithubOutputPayload(commitInfo, outputOptions)
+
+      val log = streams.value.log
+
+      def middleware(client: Client[cats.effect.IO]) =
+        if (System.getProperty("plugin.version") != null) {
+          // scripted tests
+
+          val f = RequestLogger[cats.effect.IO](
+            true,
+            true,
+            logAction = Some(s => cats.effect.IO(log.info(s)))
+          )(_)
+
+          val g = ResponseLogger[cats.effect.IO](
+            true,
+            true,
+            logAction = Some(s => cats.effect.IO(log.info(s)))
+          )(_)
+
+          f(g(client))
+        } else client
 
       EmberClientBuilder
         .default[cats.effect.IO]
         .build
+        .map(middleware)
         .use { ember =>
-          BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].map { auth =>
+          BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
             val client = BundleMonClient(
               ember,
               uri"https://api.bundlemon.dev",
-              System.getenv("BUNDLEMON_PROJECT_ID"),
               auth.get
             )
+
+            for {
+              project <- client.getOrCreateProjectId(gitDetails)
+              commitRecord <- client.createCommitRecord(project.id, commitRecordPayload)
+              _ <- client.createGithubOutput(project.id, commitRecord.record.id, outputPayload)
+            } yield ()
           }
         }
         .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)

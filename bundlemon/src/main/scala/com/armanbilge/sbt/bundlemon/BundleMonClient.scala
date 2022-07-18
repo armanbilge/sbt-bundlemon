@@ -19,8 +19,10 @@ package com.armanbilge.sbt.bundlemon
 import cats.effect.Concurrent
 import cats.effect.Sync
 import cats.syntax.all._
+import io.circe.Json
 import org.http4s.Headers
 import org.http4s.Method
+import org.http4s.Query
 import org.http4s.Request
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
@@ -28,9 +30,18 @@ import org.http4s.client.Client
 
 trait BundleMonClient[F[_]] {
 
-  def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse]
+  def getOrCreateProjectId(payload: GitDetails): F[Project]
 
-  def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse]
+  def createCommitRecord(
+      projectId: String,
+      payload: CommitRecordPayload
+  ): F[CreateCommitRecordResponse]
+
+  def createGithubOutput(
+      projectId: String,
+      commitRecordId: String,
+      payload: GithubOutputPayload
+  ): F[Unit]
 
 }
 
@@ -39,39 +50,48 @@ object BundleMonClient {
   def apply[F[_]: Concurrent](
       client: Client[F],
       endpoint: Uri,
-      projectId: String,
       auth: Auth
   ): BundleMonClient[F] = {
-    val authHeaders = auth match {
-      case GithubActionsAuth(owner, repo, runId) =>
-        Headers(
-          "BundleMon-Auth-Type" -> "GITHUB_ACTION",
-          "GitHub-Owner" -> owner,
-          "GitHub-Repo" -> repo,
-          "GitHub-Run-ID" -> runId
-        )
+
+    val headers = clientHeaders
+    val authQuery = auth match {
+      case GithubActionsAuth(_, _, runId) =>
+        Query("authType" -> "GITHUB_ACTIONS".some, "runId" -> runId.some)
     }
 
-    val baseUri = endpoint / "v1"
-    val headers = clientHeaders ++ authHeaders
-
-    val createCommitRecordRequest = {
-      val uri = baseUri / "projects" / projectId / "commit-records"
-      Request[F](Method.POST, uri, headers = headers)
-    }
-
-    val createGithubOutputRequest = {
-      val uri = baseUri / "projects" / projectId / "outputs" / "github"
-      Request[F](Method.POST, uri, headers = headers)
-    }
+    val baseUri = (endpoint / "v1").copy(query = authQuery)
 
     new BundleMonClient[F] {
 
-      def createCommitRecord(payload: CommitRecordPayload): F[CreateCommitRecordResponse] =
-        client.expect(createCommitRecordRequest.withEntity(payload))
+      def getOrCreateProjectId(payload: GitDetails): F[Project] = {
+        val uri = baseUri / "projects" / "id"
+        client.expect(Request[F](Method.POST, uri, headers = headers).withEntity(payload))
+      }
 
-      def createGithubOutput(payload: GithubOutputPayload): F[GithubOutputResponse] =
-        client.expect[GithubOutputResponse](createGithubOutputRequest.withEntity(payload))
+      def createCommitRecord(
+          projectId: String,
+          payload: CommitRecordPayload
+      ): F[CreateCommitRecordResponse] = {
+        val uri = baseUri / "projects" / projectId / "commit-records"
+        client.expect(
+          Request[F](Method.POST, uri.copy(query = authQuery), headers = headers)
+            .withEntity(payload)
+        )
+      }
+
+      def createGithubOutput(
+          projectId: String,
+          commitRecordId: String,
+          payload: GithubOutputPayload
+      ): F[Unit] = {
+        val uri =
+          baseUri / "projects" / projectId / "commit-records" / commitRecordId / "outputs" / "github"
+        client
+          .expect[Json](
+            Request[F](Method.POST, uri, headers = headers).withEntity(payload)
+          )
+          .void
+      }
 
     }
   }

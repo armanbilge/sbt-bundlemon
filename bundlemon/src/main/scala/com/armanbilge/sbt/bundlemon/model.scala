@@ -20,6 +20,19 @@ import io.circe.Codec
 import io.circe.Encoder
 import io.circe.Decoder
 
+final case class GitDetails(provider: String, owner: String, repo: String)
+
+object GitDetails {
+  implicit def encoder: Encoder[GitDetails] =
+    Encoder.forProduct3("provider", "owner", "repo")(gd => (gd.provider, gd.owner, gd.repo))
+}
+
+final case class Project(id: String)
+
+object Project {
+  implicit def decoder: Decoder[Project] = Decoder.forProduct1("id")(Project.apply)
+}
+
 final case class FileDetails(
     friendlyName: String,
     pattern: String,
@@ -84,13 +97,20 @@ object CommitRecordPayload {
   )
 }
 
-final case class CreateCommitRecordResponse(linkToReport: String)
+final case class CreateCommitRecordResponse(record: CommitRecord)
 
 object CreateCommitRecordResponse {
   implicit val codec: Codec[CreateCommitRecordResponse] =
-    Codec.forProduct1("linkToReport")(CreateCommitRecordResponse.apply)(
-      _.linkToReport
+    Codec.forProduct1("record")(CreateCommitRecordResponse.apply)(
+      _.record
     )
+}
+
+final case class CommitRecord(id: String)
+
+object CommitRecord {
+  implicit val codec: Codec[CommitRecord] =
+    Codec.forProduct1("id")(CommitRecord.apply)(_.id)
 }
 
 final case class GithubOutputPayload(
@@ -104,6 +124,7 @@ object GithubOutputPayload {
 }
 
 final case class GithubCommitInfo(
+    runId: String,
     owner: String,
     repo: String,
     commitSha: String,
@@ -112,16 +133,9 @@ final case class GithubCommitInfo(
 
 object GithubCommitInfo {
   implicit val codec: Codec[GithubCommitInfo] =
-    Codec.forProduct4("owner", "repo", "commitSha", "prNumber")(GithubCommitInfo.apply)(gci =>
-      (gci.owner, gci.repo, gci.commitSha, gci.prNumber)
-    )
-}
-
-final case class GithubOutputResponse()
-
-object GithubOutputResponse {
-  implicit val decoder: Decoder[GithubOutputResponse] =
-    Decoder.decodeUnit.map(_ => GithubOutputResponse())
+    Codec.forProduct5("runId", "owner", "repo", "commitSha", "prNumber")(
+      GithubCommitInfo.apply
+    )(gci => (gci.runId, gci.owner, gci.repo, gci.commitSha, gci.prNumber))
 }
 
 final case class GithubOutputOptions(
@@ -136,11 +150,3 @@ object GithubOutputOptions {
       (goo.checkRun, goo.commitStatus, goo.prComment)
     )
 }
-
-final case class Report(
-    metadata: ReportMetadata
-)
-
-final case class ReportMetadata(
-    linkToReport: Option[String]
-)
