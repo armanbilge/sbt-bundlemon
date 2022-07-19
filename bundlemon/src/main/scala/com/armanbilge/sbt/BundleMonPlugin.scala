@@ -27,6 +27,7 @@ import org.http4s.syntax.all._
 import org.scalajs.sbtplugin.ScalaJSPlugin
 import sbt._
 
+import java.io.OutputStream
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicLong
 
@@ -81,7 +82,8 @@ object BundleMonPlugin extends AutoPlugin {
             io.Using.fileInputStream(file) { in =>
               val bcis = new BrotliCompressorInputStream(in)
               val sum = new AtomicLong
-              bcis.transferTo(_ => sum.incrementAndGet())
+              val countStream: OutputStream = _ => sum.incrementAndGet()
+              IO.transfer(bcis, countStream)
               sum.get()
             }
           case BundleMonCompression.Gzip =>
