@@ -9,6 +9,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 ThisBuild / crossScalaVersions := Seq("2.12.16")
 
 val http4sVersion = "0.23.13"
+val brotli4jVersion = "1.7.1"
 
 lazy val root = tlCrossRootProject.aggregate(bundlemon)
 
@@ -18,7 +19,9 @@ lazy val bundlemon = project
     name := "sbt-bundlemon",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-ember-client" % http4sVersion,
-      "org.http4s" %% "http4s-circe" % http4sVersion
+      "org.http4s" %% "http4s-circe" % http4sVersion,
+      "com.aayushatharva.brotli4j" % "brotli4j" % brotli4jVersion,
+      "com.aayushatharva.brotli4j" % "native-linux-x86_64" % brotli4jVersion
     ),
     addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.10.1"),
     buildInfoPackage := "com.armanbilge.sbt.bundlemon",
