@@ -82,7 +82,9 @@ object BundleMonPlugin extends AutoPlugin {
             io.Using.fileInputStream(file) { in =>
               Brotli4jLoader.ensureAvailability()
               val sum = new AtomicLong
-              IO.transfer(in, new BrotliOutputStream(_ => sum.incrementAndGet()))
+              val bos = new BrotliOutputStream(_ => sum.incrementAndGet())
+              IO.transfer(in, bos)
+              bos.close()
               sum.get()
             }
           case BundleMonCompression.Gzip =>
