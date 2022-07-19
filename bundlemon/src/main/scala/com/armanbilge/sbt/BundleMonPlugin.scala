@@ -18,6 +18,8 @@ package com.armanbilge.sbt
 
 import com.armanbilge.sbt.bundlemon._
 import io.circe.jawn
+import lmcoursier.internal.shaded.org.apache.commons.compress.compressors.brotli.BrotliCompressorInputStream
+import org.http4s.client.Client
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import org.http4s.ember.client.EmberClientBuilder
@@ -26,11 +28,10 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import sbt._
 
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicLong
 
 import Keys._
 import ScalaJSPlugin.autoImport._
-import org.http4s.client.Client
-import java.util.concurrent.atomic.AtomicLong
 
 object BundleMonPlugin extends AutoPlugin {
 
@@ -43,8 +44,13 @@ object BundleMonPlugin extends AutoPlugin {
     lazy val bundleMonCheckRun = settingKey[Boolean]("check run (default: false)")
     lazy val bundleMonCommitStatus = settingKey[Boolean]("commit status (default: true)")
     lazy val bundleMonPrComment = settingKey[Boolean]("pr comment (default: true)")
+    lazy val bundleMonCompression =
+      settingKey[BundleMonCompression]("compression algorithm (default: Gzip)")
 
-    lazy val bundleMon = taskKey[Unit]("Calculate gzipped size and submit to bundleMon")
+    lazy val bundleMon = taskKey[Unit]("Calculate size and submit to bundleMon")
+
+    type BundleMonCompression = bundlemon.BundleMonCompression
+    val BundleMonCompression = bundlemon.BundleMonCompression
   }
 
   import autoImport._
@@ -61,6 +67,7 @@ object BundleMonPlugin extends AutoPlugin {
     Compile / bundleMon := {
       val maxSize = bundleMonMaxSize.value
       val maxPercentIncrease = bundleMonMaxPercentIncrease.value
+      val compression = bundleMonCompression.value
 
       val outputDir = (Compile / fullLinkJS / scalaJSLinkerOutputDirectory).value
       val files = (Compile / fullLinkJS).value.data.publicModules.map { module =>
@@ -68,10 +75,21 @@ object BundleMonPlugin extends AutoPlugin {
       }
 
       val fileDetails = files.map { file =>
-        val size = io.Using.fileInputStream(file) { in =>
-          val sum = new AtomicLong
-          IO.gzip(in, _ => sum.incrementAndGet())
-          sum.get()
+        val size = compression match {
+          case BundleMonCompression.Brotli =>
+            io.Using.fileInputStream(file) { in =>
+              val bcis = new BrotliCompressorInputStream(in)
+              val sum = new AtomicLong
+              bcis.transferTo(_ => sum.incrementAndGet())
+              sum.get()
+            }
+          case BundleMonCompression.Gzip =>
+            io.Using.fileInputStream(file) { in =>
+              val sum = new AtomicLong
+              IO.gzip(in, _ => sum.incrementAndGet())
+              sum.get()
+            }
+          case BundleMonCompression.None => file.length()
         }
 
         FileDetails(
@@ -79,7 +97,7 @@ object BundleMonPlugin extends AutoPlugin {
           "*.js",
           file.getName,
           size,
-          "gzip",
+          compression.toString.toLowerCase,
           maxSize.get(file.getName),
           maxPercentIncrease.get(file.getName)
         )
