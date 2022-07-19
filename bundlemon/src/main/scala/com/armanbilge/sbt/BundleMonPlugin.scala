@@ -16,9 +16,10 @@
 
 package com.armanbilge.sbt
 
+import com.aayushatharva.brotli4j.Brotli4jLoader
+import com.aayushatharva.brotli4j.encoder.BrotliOutputStream
 import com.armanbilge.sbt.bundlemon._
 import io.circe.jawn
-import lmcoursier.internal.shaded.org.apache.commons.compress.compressors.brotli.BrotliCompressorInputStream
 import org.http4s.client.Client
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
@@ -27,7 +28,6 @@ import org.http4s.syntax.all._
 import org.scalajs.sbtplugin.ScalaJSPlugin
 import sbt._
 
-import java.io.OutputStream
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicLong
 
@@ -80,10 +80,9 @@ object BundleMonPlugin extends AutoPlugin {
         val size = compression match {
           case BundleMonCompression.Brotli =>
             io.Using.fileInputStream(file) { in =>
-              val bcis = new BrotliCompressorInputStream(in)
+              Brotli4jLoader.ensureAvailability()
               val sum = new AtomicLong
-              val countStream: OutputStream = _ => sum.incrementAndGet()
-              IO.transfer(bcis, countStream)
+              IO.transfer(in, new BrotliOutputStream(_ => sum.incrementAndGet()))
               sum.get()
             }
           case BundleMonCompression.Gzip =>
