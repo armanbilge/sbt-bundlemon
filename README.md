@@ -1,6 +1,6 @@
 # sbt-bundlemon
 
-Track Scala.js bundle size in CI with [BundleMon](https://github.com/LironEr/bundlemon). Check out an [example PR](https://github.com/armanbilge/sbt-bundlemon/pull/2#issuecomment-1187659884).
+Track Scala.js bundle size in CI with [BundleMon](https://github.com/LironEr/bundlemon). Check out an [example PR](https://github.com/armanbilge/sbt-bundlemon/pull/7#issuecomment-1189183347).
 
 ## Configure
 
