@@ -60,7 +60,8 @@ object BundleMonPlugin extends AutoPlugin {
     bundleMonMaxPercentIncrease := Map.empty,
     bundleMonCheckRun := false,
     bundleMonCommitStatus := true,
-    bundleMonPrComment := true
+    bundleMonPrComment := true,
+    bundleMonCompression := BundleMonCompression.Gzip
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
