@@ -8,7 +8,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 
 ThisBuild / crossScalaVersions := Seq("2.12.16")
 
-val http4sVersion = "0.23.13"
+val http4sVersion = "0.23.14"
 val brotli4jVersion = "1.7.1"
 
 lazy val root = tlCrossRootProject.aggregate(bundlemon)
