@@ -8,7 +8,7 @@ Track Scala.js bundle size in CI with [BundleMon](https://github.com/LironEr/bun
 
 2. In `project/plugins.sbt` add:
 ```scala
-addSbtPlugin("com.armanbilge" % "sbt-bundlemon" % "0.1.0")
+addSbtPlugin("com.armanbilge" % "sbt-bundlemon" % "0.1.1")
 ```
 
 3. Enable the plugin on one or more _applications_ in your `build.sbt` (or anything that [exports to JavaScript](https://www.scala-js.org/doc/interoperability/export-to-javascript.html)):
