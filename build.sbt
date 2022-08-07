@@ -32,6 +32,7 @@ lazy val bundlemon = project
     scriptedBufferLog := false,
     Test / test := {
       scripted.toTask("").value
-    }
+    },
+    tlVersionIntroduced := Map("2.12" -> "0.1.2")
   )
   .enablePlugins(SbtPlugin, BuildInfoPlugin)

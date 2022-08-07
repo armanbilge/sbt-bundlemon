@@ -115,16 +115,16 @@ object CommitRecord {
 
 final case class GithubOutputPayload(
     git: GithubCommitInfo,
-    output: GithubOutputOptions
+    output: GithubOutputOptions,
+    auth: GithubAuth
 )
 
 object GithubOutputPayload {
   implicit val encoder: Encoder[GithubOutputPayload] =
-    Encoder.forProduct2("git", "output")(gop => (gop.git, gop.output))
+    Encoder.forProduct3("git", "output", "auth")(gop => (gop.git, gop.output, gop.auth))
 }
 
 final case class GithubCommitInfo(
-    runId: String,
     owner: String,
     repo: String,
     commitSha: String,
@@ -133,9 +133,9 @@ final case class GithubCommitInfo(
 
 object GithubCommitInfo {
   implicit val codec: Codec[GithubCommitInfo] =
-    Codec.forProduct5("runId", "owner", "repo", "commitSha", "prNumber")(
+    Codec.forProduct4("owner", "repo", "commitSha", "prNumber")(
       GithubCommitInfo.apply
-    )(gci => (gci.runId, gci.owner, gci.repo, gci.commitSha, gci.prNumber))
+    )(gci => (gci.owner, gci.repo, gci.commitSha, gci.prNumber))
 }
 
 final case class GithubOutputOptions(
@@ -149,4 +149,11 @@ object GithubOutputOptions {
     Encoder.forProduct3("checkRun", "commitStatus", "prComment")(goo =>
       (goo.checkRun, goo.commitStatus, goo.prComment)
     )
+}
+
+final case class GithubAuth(runId: String)
+
+object GithubAuth {
+  implicit def encoder: Encoder[GithubAuth] =
+    Encoder.forProduct1("runId")(_.runId)
 }
