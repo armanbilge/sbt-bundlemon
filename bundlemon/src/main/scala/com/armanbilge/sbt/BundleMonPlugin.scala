@@ -139,14 +139,15 @@ object BundleMonPlugin extends AutoPlugin {
       )
 
       val commitInfo =
-        GithubCommitInfo(System.getenv("GITHUB_RUN_ID"), owner, repo, commitSha, prNumber)
+        GithubCommitInfo(owner, repo, commitSha, prNumber)
       val outputOptions = GithubOutputOptions(
         bundleMonCheckRun.value,
         bundleMonCommitStatus.value,
         bundleMonPrComment.value
       )
+      val ghAuth = GithubAuth(System.getenv("GITHUB_RUN_ID"))
 
-      val outputPayload = GithubOutputPayload(commitInfo, outputOptions)
+      val outputPayload = GithubOutputPayload(commitInfo, outputOptions, ghAuth)
 
       val log = streams.value.log
 
