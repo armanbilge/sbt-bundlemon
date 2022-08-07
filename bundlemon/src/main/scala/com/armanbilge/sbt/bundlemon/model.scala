@@ -121,7 +121,7 @@ final case class GithubOutputPayload(
 
 object GithubOutputPayload {
   implicit val encoder: Encoder[GithubOutputPayload] =
-    Encoder.forProduct2("git", "output")(gop => (gop.git, gop.output))
+    Encoder.forProduct3("git", "output", "auth")(gop => (gop.git, gop.output, gop.auth))
 }
 
 final case class GithubCommitInfo(
