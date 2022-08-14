@@ -17,14 +17,12 @@
 package com.armanbilge.sbt.bundlemon
 
 import cats.effect.Concurrent
-import cats.effect.Sync
 import cats.syntax.all._
 import io.circe.Encoder
 import io.circe.Json
 import org.http4s.EntityEncoder
 import org.http4s.Headers
 import org.http4s.Method
-import org.http4s.Query
 import org.http4s.Request
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityDecoder
@@ -53,16 +51,12 @@ object BundleMonClient {
   def apply[F[_]: Concurrent](
       client: Client[F],
       endpoint: Uri,
-      auth: Auth
+      runId: String,
+      commitSha: String
   ): BundleMonClient[F] = {
 
     val headers = clientHeaders
-    val authQuery = auth match {
-      case GithubActionsAuth(_, _, runId) =>
-        Query("authType" -> "GITHUB_ACTIONS".some, "runId" -> runId.some)
-    }
-
-    val baseUri = (endpoint / "v1").copy(query = authQuery)
+    val baseUri = endpoint / "v1"
 
     new BundleMonClient[F] with CirceInstances with CirceEntityDecoder {
 
@@ -72,7 +66,8 @@ object BundleMonClient {
         jsonEncoderOf[F, A]
 
       def getOrCreateProjectId(payload: GitDetails): F[Project] = {
-        val uri = baseUri / "projects" / "id"
+        val uri =
+          baseUri / "projects" / "id" +? ("runId" -> runId) +? ("commitSha" -> commitSha)
         client.expect(Request[F](Method.POST, uri, headers = headers).withEntity(payload))
       }
 
@@ -80,10 +75,10 @@ object BundleMonClient {
           projectId: String,
           payload: CommitRecordPayload
       ): F[CreateCommitRecordResponse] = {
-        val uri = baseUri / "projects" / projectId / "commit-records"
+        val uri =
+          baseUri / "projects" / projectId / "commit-records" +? ("authType" -> "GITHUB_ACTIONS") +? ("runId" -> runId)
         client.expect(
-          Request[F](Method.POST, uri.copy(query = authQuery), headers = headers)
-            .withEntity(payload)
+          Request[F](Method.POST, uri, headers = headers).withEntity(payload)
         )
       }
 
@@ -101,25 +96,6 @@ object BundleMonClient {
           .void
       }
 
-    }
-  }
-
-  sealed abstract class Auth
-
-  final case class GithubActionsAuth(
-      owner: String,
-      repo: String,
-      runId: String
-  ) extends Auth
-
-  object GithubActionsAuth {
-    def fromEnv[F[_]](implicit F: Sync[F]): F[Option[GithubActionsAuth]] = F.delay {
-      (
-        Option(System.getenv("GITHUB_REPOSITORY")).map(_.split('/')),
-        Option(System.getenv("GITHUB_RUN_ID"))
-      ).tupled.collect {
-        case (Array(owner, repo), runId) => GithubActionsAuth(owner, repo, runId)
-      }
     }
   }
 

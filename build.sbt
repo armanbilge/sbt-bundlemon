@@ -33,6 +33,6 @@ lazy val bundlemon = project
     Test / test := {
       scripted.toTask("").value
     },
-    tlVersionIntroduced := Map("2.12" -> "0.1.2")
+    tlVersionIntroduced := Map("2.12" -> "0.1.3")
   )
   .enablePlugins(SbtPlugin, BuildInfoPlugin)
