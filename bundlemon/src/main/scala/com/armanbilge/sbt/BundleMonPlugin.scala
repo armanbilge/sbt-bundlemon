@@ -116,6 +116,7 @@ object BundleMonPlugin extends AutoPlugin {
 
       val Array(owner, repo) = System.getenv("GITHUB_REPOSITORY").split('/')
 
+      val runId = System.getenv("GITHUB_RUN_ID")
       val isPr = System.getenv("GITHUB_EVENT_NAME") == "pull_request"
       val ref = System.getenv("GITHUB_REF").split('/')
 
@@ -175,19 +176,18 @@ object BundleMonPlugin extends AutoPlugin {
         .build
         .map(middleware)
         .use { ember =>
-          BundleMonClient.GithubActionsAuth.fromEnv[cats.effect.IO].flatMap { auth =>
-            val client = BundleMonClient(
-              ember,
-              uri"https://api.bundlemon.dev",
-              auth.get
-            )
+          val client = BundleMonClient(
+            ember,
+            uri"https://api.bundlemon.dev",
+            runId,
+            commitSha
+          )
 
-            for {
-              project <- client.getOrCreateProjectId(gitDetails)
-              commitRecord <- client.createCommitRecord(project.id, commitRecordPayload)
-              _ <- client.createGithubOutput(project.id, commitRecord.record.id, outputPayload)
-            } yield ()
-          }
+          for {
+            project <- client.getOrCreateProjectId(gitDetails)
+            commitRecord <- client.createCommitRecord(project.id, commitRecordPayload)
+            _ <- client.createGithubOutput(project.id, commitRecord.record.id, outputPayload)
+          } yield ()
         }
         .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)
     }
