@@ -178,7 +178,7 @@ object BundleMonPlugin extends AutoPlugin {
         .use { ember =>
           val client = BundleMonClient(
             ember,
-            uri"https://bundlemon-api-lironer.vercel.app",
+            uri"https://api.bundlemon.dev",
             runId,
             commitSha
           )
