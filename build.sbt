@@ -6,10 +6,10 @@ ThisBuild / developers += tlGitHubDev("armanbilge", "Arman Bilge")
 ThisBuild / startYear := Some(2022)
 ThisBuild / tlSonatypeUseLegacyHost := false
 
-ThisBuild / crossScalaVersions := Seq("2.12.17")
+ThisBuild / crossScalaVersions := Seq("2.12.18")
 
 val http4sVersion = "0.23.18"
-val brotli4jVersion = "1.8.0"
+val brotli4jVersion = "1.12.0"
 
 lazy val root = tlCrossRootProject.aggregate(bundlemon)
 
