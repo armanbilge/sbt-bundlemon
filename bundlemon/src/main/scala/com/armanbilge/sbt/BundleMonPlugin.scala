@@ -67,6 +67,12 @@ object BundleMonPlugin extends AutoPlugin {
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
     Compile / bundleMon := {
+      if (!Option(System.getenv("GITHUB_ACTIONS")).contains("true")) {
+        throw new RuntimeException(
+          "GITHUB_ACTIONS env variable is not set. The `bundleMon` task can only be run in GHA CI."
+        )
+      }
+
       val maxSize = bundleMonMaxSize.value
       val maxPercentIncrease = bundleMonMaxPercentIncrease.value
       val compression = bundleMonCompression.value
