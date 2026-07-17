@@ -18,21 +18,24 @@ package com.armanbilge.sbt
 
 import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream
-import com.armanbilge.sbt.bundlemon._
+import com.armanbilge.sbt.bundlemon.*
 import io.circe.jawn
 import org.http4s.client.Client
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import org.http4s.ember.client.EmberClientBuilder
-import org.http4s.syntax.all._
+import org.http4s.syntax.all.*
 import org.scalajs.sbtplugin.ScalaJSPlugin
-import sbt._
+import sbt.*
+import sjsonnew.BasicJsonProtocol.StringJsonFormat
+import sjsonnew.BasicJsonProtocol.projectFormat
+import sjsonnew.JsonFormat
 
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicLong
 
-import Keys._
-import ScalaJSPlugin.autoImport._
+import Keys.*
+import ScalaJSPlugin.autoImport.*
 
 object BundleMonPlugin extends AutoPlugin {
 
@@ -48,6 +51,7 @@ object BundleMonPlugin extends AutoPlugin {
     lazy val bundleMonCompression =
       settingKey[BundleMonCompression]("compression algorithm (default: Gzip)")
 
+    @transient
     lazy val bundleMon = taskKey[Unit]("Calculate size and submit to bundleMon")
 
     type BundleMonCompression = bundlemon.BundleMonCompression
@@ -56,7 +60,7 @@ object BundleMonPlugin extends AutoPlugin {
 
   import autoImport._
 
-  override lazy val buildSettings: Seq[Setting[_]] = Seq(
+  override lazy val buildSettings: Seq[Setting[?]] = Seq(
     bundleMonMaxSize := Map.empty,
     bundleMonMaxPercentIncrease := Map.empty,
     bundleMonCheckRun := false,
@@ -65,7 +69,7 @@ object BundleMonPlugin extends AutoPlugin {
     bundleMonCompression := BundleMonCompression.Gzip
   )
 
-  override lazy val projectSettings: Seq[Setting[_]] = Seq(
+  override lazy val projectSettings: Seq[Setting[?]] = Seq(
     Compile / bundleMon := {
       if (!Option(System.getenv("GITHUB_ACTIONS")).contains("true")) {
         throw new RuntimeException(
@@ -88,7 +92,7 @@ object BundleMonPlugin extends AutoPlugin {
             io.Using.fileInputStream(file) { in =>
               Brotli4jLoader.ensureAvailability()
               val sum = new AtomicLong
-              val bos = new BrotliOutputStream(_ => sum.incrementAndGet())
+              val bos = new BrotliOutputStream(_ => sum.incrementAndGet(): Unit)
               IO.transfer(in, bos)
               bos.close()
               sum.get()
@@ -96,7 +100,7 @@ object BundleMonPlugin extends AutoPlugin {
           case BundleMonCompression.Gzip =>
             io.Using.fileInputStream(file) { in =>
               val sum = new AtomicLong
-              IO.gzip(in, _ => sum.incrementAndGet())
+              IO.gzip(in, _ => sum.incrementAndGet(): Unit)
               sum.get()
             }
           case BundleMonCompression.None => file.length()
@@ -195,8 +199,22 @@ object BundleMonPlugin extends AutoPlugin {
             _ <- client.createGithubOutput(project.id, commitRecord.record.id, outputPayload)
           } yield ()
         }
-        .unsafeRunSync()(cats.effect.unsafe.IORuntime.global)
+        .unsafeRunSync()(using cats.effect.unsafe.IORuntime.global)
     }
   )
+
+  implicit lazy val bundleMonCompressionJsonFormat: JsonFormat[BundleMonCompression] =
+    projectFormat[BundleMonCompression, String](
+      {
+        case BundleMonCompression.None => "none"
+        case BundleMonCompression.Gzip => "gzip"
+        case BundleMonCompression.Brotli => "brotli"
+      },
+      _.toLowerCase() match {
+        case "gzip" => BundleMonCompression.Gzip
+        case "brotli" => BundleMonCompression.Brotli
+        case _ => BundleMonCompression.None
+      }
+    )
 
 }

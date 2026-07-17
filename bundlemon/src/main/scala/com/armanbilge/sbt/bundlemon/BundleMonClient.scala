@@ -17,7 +17,7 @@
 package com.armanbilge.sbt.bundlemon
 
 import cats.effect.Concurrent
-import cats.syntax.all._
+import cats.syntax.all.*
 import io.circe.Encoder
 import io.circe.Json
 import org.http4s.EntityEncoder
@@ -92,7 +92,7 @@ object BundleMonClient {
         client
           .expect[Json](
             Request[F](Method.POST, uri, headers = headers).withEntity(payload)
-          )(jsonDecoder)
+          )(using jsonDecoder)
           .void
       }
 
